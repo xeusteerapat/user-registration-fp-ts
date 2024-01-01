@@ -10,6 +10,7 @@ import {
   NorthAmerica,
   Other,
   Region,
+  Response,
   UserRegistrationDto,
   firstNameIso,
   lastNameIso,
@@ -146,6 +147,7 @@ const newUser = pipe(
 );
 
 console.log(newUser);
+
 /**
 {
   _tag: 'Some',
@@ -163,7 +165,7 @@ console.log(newUser);
 const failedUserRegistrationEvent: UserRegistrationDto = {
   firstName: 'Jane',
   lastName: 'Doe',
-  age: 37,
+  age: 33,
   sex: 'M',
   country: 'Canada',
 };
@@ -182,3 +184,64 @@ const failedValidateUser = pipe(
 );
 
 console.log(failedValidateUser); // { _tag: 'None' }
+console.log(
+  '<===================================================================================================>'
+);
+
+const createdResponse = (message: string): Response => ({
+  status: 201,
+  message,
+});
+
+const badRequestResponse = (message: string): Response => ({
+  status: 400,
+  message,
+});
+
+const notFoundResponse = (message: string): Response => ({
+  status: 404,
+  message,
+});
+
+const internalServerErrorResponse = (message: string): Response => ({
+  status: 500,
+  message,
+});
+
+const userResponse = (user: UserRegistrationDto) =>
+  pipe(
+    user,
+    evt =>
+      sequenceForOption(
+        O.some(firstNameIso.wrap(evt.firstName)),
+        O.some(lastNameIso.wrap(evt.lastName)),
+        prismPositiveInteger.getOption(evt.age),
+        findGender(evt.sex),
+        findRegion(evt.country)
+      ),
+    O.map(([f, l, a, g, c]) => createUser(f, l, a, g, c)),
+    O.map(user => {
+      console.log(`User ${user.firstName} ${user.lastName} created`);
+      return createdResponse(`User ${JSON.stringify(user)} created`);
+    }),
+    O.getOrElse(() => badRequestResponse('Invalid user'))
+  );
+
+console.log(userResponse(newUserRegistrationEvent)); // success
+console.log(userResponse(failedUserRegistrationEvent)); // { status: 400, message: 'Invalid user' }
+console.log(
+  '<===================================================================================================>'
+);
+
+// using flow
+const flow = (user: UserRegistrationDto) =>
+  pipe(
+    fieldsNotEmpty(user),
+    E.chain(validateAge),
+    E.chain(validateGender),
+    E.map(userResponse),
+    E.getOrElse(() => badRequestResponse('Invalid user'))
+  );
+
+console.log(flow(newUserRegistrationEvent)); // success
+console.log(flow(failedUserRegistrationEvent)); // { status: 400, message: 'Invalid user' }

@@ -58,3 +58,8 @@ export type CreateUser = (
 
 export type FindRegion = (country: string) => O.Option<Region>;
 export type FindGender = (sex: string) => O.Option<Gender>;
+
+export type Response = {
+  status: number;
+  message: string;
+};
