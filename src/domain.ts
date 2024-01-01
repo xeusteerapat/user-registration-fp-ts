@@ -1,6 +1,7 @@
 import { Newtype, iso } from 'newtype-ts';
 import { PositiveInteger } from 'newtype-ts/lib/PositiveInteger';
 import * as E from 'fp-ts/lib/Either';
+import * as O from 'fp-ts/lib/Option';
 
 export type UserRegistrationDto = {
   firstName: string;
@@ -29,8 +30,8 @@ export type Region = Europe | NorthAmerica | Other;
 export type FirstName = Newtype<{ readonly FirstName: unique symbol }, string>;
 export type LastName = Newtype<{ readonly LastName: unique symbol }, string>;
 
-export const firstName = iso<FirstName>();
-export const lastName = iso<LastName>();
+export const firstNameIso = iso<FirstName>();
+export const lastNameIso = iso<LastName>();
 
 export type User = {
   firstName: FirstName;
@@ -46,3 +47,14 @@ export type FieldNotEmpty = (
 
 export type ValidateAge = FieldNotEmpty;
 export type ValidateGender = FieldNotEmpty;
+
+export type CreateUser = (
+  firstName: FirstName,
+  lastName: LastName,
+  age: PositiveInteger,
+  gender: Gender,
+  region: Region
+) => User;
+
+export type FindRegion = (country: string) => O.Option<Region>;
+export type FindGender = (sex: string) => O.Option<Gender>;
