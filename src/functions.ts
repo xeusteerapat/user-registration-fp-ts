@@ -6,27 +6,37 @@ import {
   UserRegistrationDto,
 } from './domain';
 import { pipe } from 'fp-ts/lib/function';
+import { NonEmptyArray, getSemigroup } from 'fp-ts/lib/NonEmptyArray';
+import { sequenceT } from 'fp-ts/lib/Apply';
 
-const fieldsNotEmpty: FieldNotEmpty = evt =>
+const applicativeValidation = E.getApplicativeValidation(
+  getSemigroup<string>()
+);
+
+type Validation = (
+  evt: UserRegistrationDto
+) => E.Either<NonEmptyArray<string>, UserRegistrationDto>;
+
+const fieldsNotEmpty: Validation = evt =>
   evt.firstName && evt.lastName && evt.age && evt.sex && evt.country
     ? E.right(evt)
-    : E.left('Please fill in all required fields');
+    : E.left(['Please fill in all required fields']);
 
-const validateAge: ValidateAge = evt =>
+const validateAge: Validation = evt =>
   evt.age >= 18 && evt.age < 150
     ? E.right(evt)
-    : E.left(`Invalid age of ${evt.age}`);
+    : E.left([`Invalid age of ${evt.age}`]);
 
-const validateGender: ValidateGender = evt =>
+const validateGender: Validation = evt =>
   evt.sex === 'M' || evt.sex === 'F' || evt.sex === 'X'
     ? E.right(evt)
-    : E.left(`Invalid sex of ${evt.sex}`);
+    : E.left([`Invalid sex of ${evt.sex}`]);
 
 const exampleRegistrationEvent: UserRegistrationDto = {
   firstName: 'John',
   lastName: 'Doe',
   sex: 'M',
-  age: 25,
+  age: 18,
   country: 'Thailand',
 };
 
@@ -57,3 +67,24 @@ const result2 = pipe(
 );
 
 console.log(result2); // same result as above
+
+const exampleOfLeftResult: UserRegistrationDto = {
+  firstName: 'John',
+  lastName: 'Doe',
+  sex: 'G',
+  age: 13,
+  country: 'Thailand',
+};
+
+// with pipe sequence
+const resultWithSequence = pipe(
+  exampleOfLeftResult,
+  evt =>
+    sequenceT(applicativeValidation)(
+      fieldsNotEmpty(evt),
+      validateAge(evt),
+      validateGender(evt)
+    ),
+  E.map(([evt]) => evt)
+);
+console.log(resultWithSequence); // { _tag: 'Left', left: [ 'Invalid age of 13', 'Invalid sex of G' ] }
